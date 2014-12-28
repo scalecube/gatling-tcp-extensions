@@ -26,7 +26,7 @@ object TcpRegexCheckBuilder {
 }
 
 class TcpRegexCheckBuilder[X](private[tcp] val expression: Expression[String],
-                             private[tcp] val extender: Extender[TcpCheck, String])(implicit groupExtractor: GroupExtractor[X])
+                              private[tcp] val extender: Extender[TcpCheck, String])(implicit groupExtractor: GroupExtractor[X])
     extends DefaultMultipleFindCheckBuilder[TcpCheck, String, CharSequence, X](
       extender,
       TcpCheckBuilders.PassThroughMessagePreparer) {

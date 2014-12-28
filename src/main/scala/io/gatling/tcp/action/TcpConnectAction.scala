@@ -20,7 +20,7 @@ class TcpConnectAction(requestName: Expression[String], val next: ActorRef, prot
       def connect(tx: TcpTx): Unit = {
         //  logger.info(s"Opening websocket '$wsName': Scenario '${session.scenarioName}', UserId #${session.userId}")
 
-        val tcpActor = actor(context)(new TcpActor())
+        val tcpActor = actor(context, actorName("tcpActor"))(new TcpActor())
         TcpEngine.instance.startTcpTransaction(tx, tcpActor)
 
       }

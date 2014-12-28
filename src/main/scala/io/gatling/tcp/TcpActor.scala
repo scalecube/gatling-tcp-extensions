@@ -3,7 +3,7 @@ package io.gatling.tcp
 import akka.actor.ActorRef
 import io.gatling.core.akka.BaseActor
 import io.gatling.core.check.CheckResult
-import io.gatling.core.result.message.{KO, OK, Status}
+import io.gatling.core.result.message.{ KO, OK, Status }
 import io.gatling.core.result.writer.DataWriterClient
 import io.gatling.core.session.Session
 import io.gatling.core.util.TimeHelper._
@@ -24,44 +24,42 @@ class TcpActor extends BaseActor with DataWriterClient {
     case _ => context.stop(self)
   }
 
-
-
   def connectedState(channel: Channel, tx: TcpTx): Receive = {
-    def succeedPendingCheck(checkResult: CheckResult) = {
-      tx.check match {
-        case Some(check) =>
-          // expected count met, let's stop the check
-          logRequest(tx.session, tx.requestName, OK, tx.start, nowMillis, None)
-          val newUpdates = if(checkResult.hasUpdate){
-            checkResult.update.getOrElse(Session.Identity)::tx.updates
-          }else{
-            tx.updates
-          }
-          // apply updates and release blocked flow
-          val newSession = tx.session.update(newUpdates)
+      def succeedPendingCheck(checkResult: CheckResult) = {
+        tx.check match {
+          case Some(check) =>
+            // expected count met, let's stop the check
+            logRequest(tx.session, tx.requestName, OK, tx.start, nowMillis, None)
+            val newUpdates = if (checkResult.hasUpdate) {
+              checkResult.update.getOrElse(Session.Identity) :: tx.updates
+            } else {
+              tx.updates
+            }
+            // apply updates and release blocked flow
+            val newSession = tx.session.update(newUpdates)
 
-          tx.next ! newSession
-          val newTx = tx.copy(session = newSession, updates = Nil, check = None)
-          context.become(connectedState(channel, newTx))
-        case _ =>
+            tx.next ! newSession
+            val newTx = tx.copy(session = newSession, updates = Nil, check = None)
+            context.become(connectedState(channel, newTx))
+          case _ =>
+        }
       }
-    }
     {
-      case Send(requestName, message, next, session) => {
+      case Send(requestName, message, next, session, check) => {
         logger.debug(s"Sending message check on channel '$channel': $message")
 
         val now = nowMillis
 
-        tx.check match {
+        check match {
           case Some(c) =>
             // do this immediately instead of self sending a Listen message so that other messages don't get a chance to be handled before
-            setCheck(tx, channel, requestName + " Check", c, next, session)
+            setCheck(tx, channel, requestName, c, next, session)
           case None => next ! session
         }
 
         message match {
           case TextTcpMessage(text) => channel.write(text)
-          case _ => logger.warn("Only text messages supported")
+          case _                    => logger.warn("Only text messages supported")
         }
 
         logRequest(session, requestName, OK, now, now)
@@ -77,7 +75,7 @@ class TcpActor extends BaseActor with DataWriterClient {
             case io.gatling.core.validation.Success(result) =>
 
               succeedPendingCheck(result)
-            case _ => failPendingCheck(tx, "check failed")
+            case s => failPendingCheck(tx, s"check failed $s")
 
           }
         }
@@ -85,12 +83,13 @@ class TcpActor extends BaseActor with DataWriterClient {
       case CheckTimeout(check) =>
         tx.check match {
           case Some(`check`) =>
-          case _ =>
+
             val newTx = failPendingCheck(tx, "Check failed: Timeout")
             context.become(connectedState(channel, newTx))
 
             // release blocked session
             newTx.next ! newTx.applyUpdates(newTx.session).session
+          case _ =>
         }
 
       // ignore outdated timeout
@@ -105,7 +104,7 @@ class TcpActor extends BaseActor with DataWriterClient {
       }
       case OnDisconnect(time) =>
         context.become(disconnectedState(tx))
-      case _ =>
+
     }
   }
 
@@ -125,7 +124,6 @@ class TcpActor extends BaseActor with DataWriterClient {
       errorMessage)
   }
 
-
   def setCheck(tx: TcpTx, channel: Channel, requestName: String, check: TcpCheck, next: ActorRef, session: Session): Unit = {
 
     logger.debug(s"setCheck timeout=${check.timeout}")
@@ -137,11 +135,11 @@ class TcpActor extends BaseActor with DataWriterClient {
 
     val newTx = tx
       .applyUpdates(session)
-      .copy(start = nowMillis, check = Some(check), next = next, requestName = requestName+"Check")
+      .copy(start = nowMillis, check = Some(check), next = next, requestName = requestName + "Check")
     context.become(connectedState(channel, newTx))
 
-//    if (!check.blocking)
-//      next ! newTx.session
+    //    if (!check.blocking)
+    //      next ! newTx.session
   }
   def failPendingCheck(tx: TcpTx, message: String): TcpTx = {
     tx.check match {

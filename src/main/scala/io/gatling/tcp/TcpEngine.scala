@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 import java.util.concurrent.{ Executors, TimeUnit }
 
 import akka.actor.ActorRef
-import com.typesafe.scalalogging.slf4j.StrictLogging
+import com.typesafe.scalalogging.StrictLogging
 import io.gatling.core.akka.AkkaDefaults
 import io.gatling.core.check.Check
 import io.gatling.core.session.Session
@@ -45,8 +45,8 @@ case class TcpTx(session: Session,
                  protocol: TcpProtocol,
                  message: TcpMessage,
                  requestName: String,
-                 check : Option[TcpCheck] = None,
-                 updates: List[Session => Session] = Nil){
+                 check: Option[TcpCheck] = None,
+                 updates: List[Session => Session] = Nil) {
   def applyUpdates(session: Session) = {
     val newSession = session.update(updates)
     copy(session = newSession, updates = Nil)

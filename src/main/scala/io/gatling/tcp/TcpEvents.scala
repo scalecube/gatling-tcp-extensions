@@ -11,9 +11,9 @@ sealed trait TcpEvents
 case class OnConnect(tx: TcpTx, channel: Channel, time: Long) extends TcpEvents
 case class OnDisconnect(time: Long) extends TcpEvents
 case class OnTextMessage(message: String, time: Long) extends TcpEvents
-case class CheckTimeout(check : TcpCheck) extends TcpEvents
+case class CheckTimeout(check: TcpCheck) extends TcpEvents
 
 sealed trait TcpUserActions
 case object Connect extends TcpUserActions
-case class Send(requestName: String, message: TcpMessage, next: ActorRef, session: Session) extends TcpUserActions
+case class Send(requestName: String, message: TcpMessage, next: ActorRef, session: Session, check: Option[TcpCheck]) extends TcpUserActions
 case class Disconnect(requestName: String, next: ActorRef, session: Session) extends TcpUserActions

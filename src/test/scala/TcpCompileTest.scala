@@ -18,6 +18,6 @@ class TcpCompileTest extends Simulation {
   }
     .exec(tcp("disconnect").disconnect())
 
-  setUp(scn.inject(constantUsersPerSec(5) during(5 minutes))).protocols(tcpConfig)
+  setUp(scn.inject(atOnceUsers(5))).protocols(tcpConfig)
 
 }

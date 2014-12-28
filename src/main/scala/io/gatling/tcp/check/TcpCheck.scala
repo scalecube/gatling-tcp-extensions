@@ -1,6 +1,6 @@
 package io.gatling.tcp.check
 
-import io.gatling.core.check.{CheckResult, Check}
+import io.gatling.core.check.{ CheckResult, Check }
 import io.gatling.core.session.Session
 import io.gatling.core.util.TimeHelper._
 import io.gatling.core.validation.Validation

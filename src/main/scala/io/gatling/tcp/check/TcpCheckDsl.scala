@@ -4,10 +4,9 @@ import io.gatling.core.session._
 
 import scala.concurrent.duration.FiniteDuration
 
-
 trait TcpCheckDsl {
 
-  val tcpCheck : Step2 = new Step2
+  val tcpCheck: Step2 = new Step2
 
   class Step2() {
 
