@@ -6,14 +6,14 @@ import scala.concurrent.duration._
 
 class TcpCompileTest extends Simulation {
 
-  val tcpConfig = tcp.address("127.0.0.1").port(4800)
+  val tcpConfig = tcp.address("127.0.0.1").port(4800).lengthBased(4)
   val scn = scenario("Tcp")
     .exec(tcp("Connect").connect())
     .pause(1)
     .repeat(2, "i") {
        exec(tcp("Say Hello Tcp")
-      .sendText( """{"qualifier":"pt.openapi.context/createContextRequest","data":{"properties":null}}""")
-       .check(tcpCheck.within(5 seconds).regex( """"contextId":"(.+?)"""").saveAs("contextId"))
+      .sendText( """{"qualifier":"someQualifier","data":{"properties":null}}""")
+       .check(tcpCheck.within(5 seconds).regex( """"context":"(.+?)"""").saveAs("context"))
        ).pause(1)
   }
     .exec(tcp("disconnect").disconnect())
