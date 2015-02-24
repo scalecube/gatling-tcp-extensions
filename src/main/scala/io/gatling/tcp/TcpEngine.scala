@@ -10,9 +10,12 @@ import io.gatling.core.check.Check
 import io.gatling.core.session.Session
 import io.gatling.tcp.check.TcpCheck
 import org.jboss.netty.bootstrap.ClientBootstrap
-import org.jboss.netty.channel.{ Channel, Channels, ChannelPipeline, ChannelPipelineFactory }
+import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
+import org.jboss.netty.channel._
 import org.jboss.netty.channel.socket.nio.{ NioWorkerPool, NioClientBossPool, NioClientSocketChannelFactory }
-import org.jboss.netty.handler.codec.frame.{ LengthFieldPrepender, LengthFieldBasedFrameDecoder }
+import org.jboss.netty.handler.codec.frame.{FrameDecoder, DelimiterBasedFrameDecoder, LengthFieldPrepender, LengthFieldBasedFrameDecoder}
+import org.jboss.netty.handler.codec.oneone.OneToOneEncoder
+import org.jboss.netty.handler.codec.protobuf.{ProtobufVarint32LengthFieldPrepender, ProtobufVarint32FrameDecoder}
 import org.jboss.netty.handler.codec.string.{ StringEncoder, StringDecoder }
 import org.jboss.netty.util.{ CharsetUtil, HashedWheelTimer }
 
@@ -52,14 +55,21 @@ case class TcpTx(session: Session,
     copy(session = newSession, updates = Nil)
   }
 }
+trait TcpFramer
+case class LengthBasedTcpFramer(lengthFieldOffset: Int, lengthFieldLength: Int,
+                                 lengthAdjustment: Int, bytesToStrip: Int) extends TcpFramer{
+  def this(lenghtFieldLength: Int) = this(0,lengthFieldLength, 0,lengthFieldLength)
+}
+case class DelimiterBasedTcpFramer(delimiters : Array[Byte], stripDelimiter : Boolean) extends TcpFramer {
+  def this(delimiters: Array[Byte]) = this(delimiters, true)
+}
+case object ProtobufVarint32TcpFramer extends TcpFramer
 
 class TcpEngine {
   val numWorkers = Runtime.getRuntime.availableProcessors()
   val nettyTimer = new HashedWheelTimer(10, TimeUnit.MILLISECONDS)
   val nioThreadPool = Executors.newCachedThreadPool
   val socketChannelFactory = new NioClientSocketChannelFactory(new NioClientBossPool(nioThreadPool, 1, nettyTimer, null), new NioWorkerPool(nioThreadPool, numWorkers))
-
-  val prepender: LengthFieldPrepender = new LengthFieldPrepender(4)
 
   val stringDecoder: StringDecoder = new StringDecoder(CharsetUtil.UTF_8)
 
@@ -70,7 +80,9 @@ class TcpEngine {
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       override def getPipeline: ChannelPipeline = {
         val pipeline = Channels.pipeline()
-        pipeline.addLast("framer", new LengthFieldBasedFrameDecoder(Short.MaxValue, 0, 4, 0, 4))
+        val framer = resolveFramer(protocol)
+        val prepender = resolvePrepender(protocol)
+        pipeline.addLast("framer", framer)
         pipeline.addLast("prepender", prepender)
         pipeline.addLast("decoder", stringDecoder)
         pipeline.addLast("encoder", encoder)
@@ -87,6 +99,30 @@ class TcpEngine {
       }
     } else {
       throw new RuntimeException
+    }
+  }
+
+  private def resolvePrepender(protocol: TcpProtocol): OneToOneEncoder {def encode(ctx: ChannelHandlerContext, channel: Channel, msg: Any): AnyRef} = {
+    val prepender = protocol.framer match {
+      case LengthBasedTcpFramer(offset, lenght, adjustment, strip) => new LengthFieldPrepender(lenght)
+      case DelimiterBasedTcpFramer(delimiters, strip) => new OneToOneEncoder {
+        override def encode(ctx: ChannelHandlerContext, channel: Channel, msg: scala.Any): AnyRef = {
+          msg match {
+            case buffer: ChannelBuffer => ChannelBuffers.copiedBuffer(msg.asInstanceOf[ChannelBuffer], ChannelBuffers.copiedBuffer(delimiters))
+            case _ => ???
+          }
+        }
+      }
+      case ProtobufVarint32TcpFramer => new ProtobufVarint32LengthFieldPrepender
+    }
+    prepender
+  }
+
+  private def resolveFramer(protocol: TcpProtocol): FrameDecoder = {
+    protocol.framer match {
+      case LengthBasedTcpFramer(offset, lenght, adjustment, strip) => new LengthFieldBasedFrameDecoder(Short.MaxValue, offset, lenght, adjustment, strip)
+      case DelimiterBasedTcpFramer(delimiters, strip) => new DelimiterBasedFrameDecoder(Short.MaxValue, strip, ChannelBuffers.copiedBuffer(delimiters))
+      case ProtobufVarint32TcpFramer => new ProtobufVarint32FrameDecoder()
     }
   }
 
