@@ -1,9 +1,13 @@
+import io.gatling.sbt.GatlingPlugin
+
 val scala_version = "2.11.4"
-val gatling = "io.gatling" % "gatling-core" % "2.1.2"
-private val netty = "io.netty" % "netty" % "3.9.5.Final"
-private val akkaActor = "com.typesafe.akka" %% "akka-actor" % "2.3.7"
-private val scalalogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
-private def scalaLibrary = "org.scala-lang" % "scala-library" % scala_version
+def gatling = "io.gatling" % "gatling-core" % "2.1.5"
+def netty = "io.netty" % "netty" % "3.10.1.Final"
+def akkaActor = "com.typesafe.akka" %% "akka-actor" % "2.3.7"
+def scalalogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
+def scalaLibrary = "org.scala-lang" % "scala-library" % scala_version
+def highcharts = "io.gatling.highcharts" % "gatling-charts-highcharts" % "2.1.5" % "test"
+def gatlingtestframework = "io.gatling" % "gatling-test-framework" % "2.1.5" % "test"
 
 
 lazy val root = (project in file(".")).
@@ -15,5 +19,9 @@ lazy val root = (project in file(".")).
     libraryDependencies += gatling,
     libraryDependencies += netty,
     libraryDependencies += akkaActor,
-    libraryDependencies += scalalogging
+    libraryDependencies += scalalogging,
+    libraryDependencies += highcharts,
+    libraryDependencies += gatlingtestframework
   )
+
+enablePlugins(GatlingPlugin)

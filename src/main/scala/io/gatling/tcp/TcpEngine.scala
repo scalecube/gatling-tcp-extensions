@@ -58,7 +58,7 @@ case class TcpTx(session: Session,
 trait TcpFramer
 case class LengthBasedTcpFramer(lengthFieldOffset: Int, lengthFieldLength: Int,
                                  lengthAdjustment: Int, bytesToStrip: Int) extends TcpFramer{
-  def this(lenghtFieldLength: Int) = this(0,lengthFieldLength, 0,lengthFieldLength)
+  def this(lengthFieldLength: Int) = this(0,lengthFieldLength, 0,lengthFieldLength)
 }
 case class DelimiterBasedTcpFramer(delimiters : Array[Byte], stripDelimiter : Boolean) extends TcpFramer {
   def this(delimiters: Array[Byte]) = this(delimiters, true)

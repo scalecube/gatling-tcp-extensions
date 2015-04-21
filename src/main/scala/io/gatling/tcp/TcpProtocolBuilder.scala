@@ -13,7 +13,7 @@ case class TcpProtocolBuilderFramerStep(address: String, port: Int) {
   def lengthBased(offset : Int, length: Int, adjust: Int, strip : Int) = {
     TcpProtocolBuilder(address, port, LengthBasedTcpFramer(offset, length, adjust, strip))
   }
-  def lengthBased(length: Int) = lengthBased(0, length, 0, length)
+  def lengthBased(length: Int):TcpProtocolBuilder = lengthBased(0, length, 0, length)
   def delimiterBased(delimiters : String, strip : Boolean, charset : String = "UTF-8") = {
     TcpProtocolBuilder(address,port, DelimiterBasedTcpFramer(delimiters.getBytes(Charset.forName(charset)),strip))
   }
