@@ -10,11 +10,14 @@ import io.gatling.core.check.Check
 import io.gatling.core.session.Session
 import io.gatling.tcp.check.TcpCheck
 import org.jboss.netty.bootstrap.ClientBootstrap
-import org.jboss.netty.channel.{ Channel, Channels, ChannelPipeline, ChannelPipelineFactory }
+import org.jboss.netty.channel._
 import org.jboss.netty.channel.socket.nio.{ NioWorkerPool, NioClientBossPool, NioClientSocketChannelFactory }
 import org.jboss.netty.handler.codec.frame.{ LengthFieldPrepender, LengthFieldBasedFrameDecoder }
 import org.jboss.netty.handler.codec.string.{ StringEncoder, StringDecoder }
 import org.jboss.netty.util.{ CharsetUtil, HashedWheelTimer }
+
+import scala.concurrent.{Future, Promise}
+import scala.util.Try
 
 object TcpEngine extends AkkaDefaults with StrictLogging {
   private var _instance: Option[TcpEngine] = None
@@ -65,7 +68,7 @@ class TcpEngine {
 
   val encoder: StringEncoder = new StringEncoder(CharsetUtil.UTF_8)
 
-  def tcpClient(session: Session, protocol: TcpProtocol, listener: MessageListener) = {
+  def tcpClient(session: Session, protocol: TcpProtocol, listener: MessageListener) : Future[Session] = {
     val bootstrap = new ClientBootstrap(socketChannelFactory)
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       override def getPipeline: ChannelPipeline = {
@@ -78,22 +81,34 @@ class TcpEngine {
         pipeline
       }
     })
-    val channelFuture = bootstrap.connect(new InetSocketAddress(protocol.address, protocol.port)).awaitUninterruptibly()
-    if (channelFuture.isSuccess) {
-      val channel = channelFuture.getChannel
-      session("channel").asOption[Channel] match {
-        case Some(ch) => (session, ch)
-        case None     => (session.set("channel", channel), channel)
+    val channelFuture = bootstrap.connect(new InetSocketAddress(protocol.address, protocol.port))
+    val promise = Promise[Session]()
+    channelFuture.addListener(new ChannelFutureListener {
+      override def operationComplete(p1: ChannelFuture): Unit = {
+        if (channelFuture.isSuccess) {
+          val channel = channelFuture.getChannel
+          session("channel").asOption[Channel] match {
+            case Some(ch) => promise.trySuccess(session)
+            case None     => promise.trySuccess(session.set("channel", channel))
+          }
+        } else {
+          promise.failure(p1.getCause)
+        }
       }
-    } else {
-      throw new RuntimeException
-    }
+    })
+    promise.future
+
   }
 
-  def startTcpTransaction(tx: TcpTx, actor: ActorRef) = {
+  def startTcpTransaction(tx: TcpTx, actor: ActorRef) : Unit = {
     val listener = new MessageListener(tx, actor)
+    import scala.concurrent.ExecutionContext.Implicits.global
 
-    val (session, channel) = tcpClient(tx.session, tx.protocol, listener)
-    //channel.write(tx.message)
+    val client: Future[Session] = tcpClient(tx.session, tx.protocol, listener)
+
+    client.onComplete {
+      case scala.util.Success(session) => actor ! OnConnect(tx, session("channel").asOption[Channel].get, System.currentTimeMillis())
+      case scala.util.Failure(th) => actor ! OnConnectFailed(tx,System.currentTimeMillis())
+    }
   }
 }

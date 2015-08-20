@@ -20,9 +20,15 @@ class TcpActor extends BaseActor with DataWriterClient {
       val newTx = tx.copy(session = newSession)
       context.become(connectedState(channel, newTx))
       tx.next ! newSession
-      logRequest(tx.session, "connect", OK, nowMillis, nowMillis)
+      logRequest(tx.session,  tx.requestName, OK, nowMillis, nowMillis)
+    case OnConnectFailed(tx, time) =>
+      logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some("connection failed"))
+      val newTx = tx.copy(updates = Session.MarkAsFailedUpdate :: tx.updates, check = None)
+      context.become(disconnectedState(tx))
+      newTx.next ! newTx.applyUpdates(newTx.session).session
     case _ => context.stop(self)
   }
+
 
   def connectedState(channel: Channel, tx: TcpTx): Receive = {
       def succeedPendingCheck(checkResult: CheckResult) = {
@@ -75,7 +81,10 @@ class TcpActor extends BaseActor with DataWriterClient {
             case io.gatling.core.validation.Success(result) =>
 
               succeedPendingCheck(result)
-            case s => failPendingCheck(tx, s"check failed $s")
+            case s =>
+              val newTx = failPendingCheck(tx, s"check failed $s")
+              context.become(connectedState(channel, newTx))
+              newTx.next ! newTx.applyUpdates(newTx.session).session
 
           }
         }
@@ -99,17 +108,25 @@ class TcpActor extends BaseActor with DataWriterClient {
         channel.close()
         val newSession: Session = session.remove("channel")
         //
-        next ! newSession
         logRequest(session, requestName, OK, nowMillis, nowMillis)
+        context.become(disconnectedState(tx))
+        next ! newSession
       }
       case OnDisconnect(time) =>
+        logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some("channel disconnected"))
         context.become(disconnectedState(tx))
 
     }
   }
 
-  def disconnectedState(tx: TcpTx): Receive = {
-    case a: AnyRef => logger.error(a.toString)
+  def disconnectedState(tx: TcpTx) : Receive = {
+    case OnDisconnect(time) =>
+
+    case Send =>
+      logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some("channel already closed"))
+      val newTx = tx.copy(updates = Session.MarkAsFailedUpdate :: tx.updates, check = None)
+      newTx.next ! newTx.applyUpdates(newTx.session).session
+      context.stop(self)
   }
 
   private def logRequest(session: Session, requestName: String, status: Status, started: Long, ended: Long, errorMessage: Option[String] = None): Unit = {
@@ -138,8 +155,6 @@ class TcpActor extends BaseActor with DataWriterClient {
       .copy(start = nowMillis, check = Some(check), next = next, requestName = requestName + "Check")
     context.become(connectedState(channel, newTx))
 
-    //    if (!check.blocking)
-    //      next ! newTx.session
   }
   def failPendingCheck(tx: TcpTx, message: String): TcpTx = {
     tx.check match {
