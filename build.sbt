@@ -25,3 +25,35 @@ lazy val root = (project in file(".")).
   )
 
 enablePlugins(GatlingPlugin)
+
+publishMavenStyle := true
+
+publishTo := {
+  val nexus = "https://oss.sonatype.org/"
+  if (isSnapshot.value)
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  else
+    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+}
+
+publishArtifact in Test := false
+
+pomIncludeRepository := { _ => false }
+
+pomExtra := <url>https://github.com/scalecube/gatling-tcp-extensions</url>
+  <licenses>
+    <license>
+      <name>The MIT License (MIT)</name>
+      <url>https://opensource.org/licenses/MIT</url>
+    </license>
+  </licenses>
+  <scm>
+    <url>https://github.com/scalecube/gatling-tcp-extensions.git</url>
+    <connection>scm:git:https://github.com/scalecube/gatling-tcp-extensions.git</connection>
+  </scm>
+  <developers>
+    <developer>
+      <id>myroslavlisniak</id>
+      <name>Myroslav Lisniak</name>
+    </developer>
+  </developers>
