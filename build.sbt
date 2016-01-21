@@ -12,7 +12,7 @@ def gatlingtestframework = "io.gatling" % "gatling-test-framework" % "2.1.5" % "
 
 lazy val root = (project in file(".")).
   settings(
-    organization := "com.github",
+    organization := "io.scalecube",
     version := "0.1.0",
     scalaVersion := scala_version,
     name := "gatling-tcp-extension",
