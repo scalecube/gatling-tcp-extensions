@@ -19,3 +19,5 @@ Sbt
 ``` scala
 libraryDependencies += "io.scalecube" %% "gattling-tcp-extension" % "0.1.0"
 ```
+
+[Usage](doc/Usage.md)
