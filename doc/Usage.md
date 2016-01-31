@@ -8,8 +8,7 @@ so the model is different from the HTTP request/response pair.
 ##Connect
 The first thing is to create new tcp connection:
 
-open(url: Expression[String])
-
+    connect()
 For example:
 ``` scala
 exec(tcp("Connect").connect())
@@ -18,16 +17,14 @@ exec(tcp("Connect").connect())
 ##Disconnect
 When you’re done with a connection, you can close it:
 
-disconnect
-
+    disconnect()
 For example:
 ``` scala
 exec(tcp("Close").disconnect)
 ```
 
 ##Send a Message
-
-One can send 2 forms of messages: text:
+Only text messages is supported now:
 
     sendText(text: Expression[String])
 
@@ -45,9 +42,9 @@ Gatling currently only support one check at a time per WebSocket.
 Set a Check
 
 Checks can be set when sending a message:
-
+``` scala
 exec(tcp("Send").sendText("hello").check(myCheck))
-
+```
 If a check was already registered on the tcp at this time, it’s considered as failed and replaced with the new one.
 
 ##Build a Check
@@ -59,7 +56,7 @@ tcpCheck creates a blocking check: the main HTTP flow is blocked until the check
 
 ###Step 1: Set the Timeout
 
-within(timeout: FiniteDuration)
+    within(timeout: FiniteDuration)
 
 ###Step 2: Exit condition
 TBD (Not implemented yet. should be skipped)
@@ -104,9 +101,9 @@ port(port: Int): similar to standard baseURLs for HTTP, serves as round-robin ro
 ### Delimiters
 Tcp is stream based protocol so need to distinguish messages one from each other.
 Now three types of delimiters is supported:
-1)  lengthBased(length: Int) - length based delimiter - the length of each message is prepended to message, and has size length in bytes
-2) delimiterBased(delimiters : String, strip : Boolean) - messages delimit by delimeters in the end of message.
-3) protobufVarint - prepend protobuf varint length to the message
+1. lengthBased(length: Int) - length based delimiter - the length of each message is prepended to message, and has size length in bytes.
+2. delimiterBased(delimiters : String, strip : Boolean) - messages delimit by delimeters in the end of message.
+3. protobufVarint - prepend protobuf varint length to the message.
 
 ##Example
 
