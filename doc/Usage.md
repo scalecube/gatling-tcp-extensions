@@ -101,8 +101,11 @@ port(port: Int): similar to standard baseURLs for HTTP, serves as round-robin ro
 ### Delimiters
 Tcp is stream based protocol so need to distinguish messages one from each other.
 Now three types of delimiters is supported:
+
 1. lengthBased(length: Int) - length based delimiter - the length of each message is prepended to message, and has size length in bytes.
+
 2. delimiterBased(delimiters : String, strip : Boolean) - messages delimit by delimeters in the end of message.
+
 3. protobufVarint - prepend protobuf varint length to the message.
 
 ##Example
