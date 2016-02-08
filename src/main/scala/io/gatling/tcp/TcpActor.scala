@@ -1,16 +1,16 @@
 package io.gatling.tcp
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, Props}
 import io.gatling.core.akka.BaseActor
 import io.gatling.core.check.CheckResult
-import io.gatling.core.result.message.{ KO, OK, Status }
+import io.gatling.core.result.message.{KO, OK, Status}
 import io.gatling.core.result.writer.DataWriterClient
 import io.gatling.core.session.Session
 import io.gatling.core.util.TimeHelper._
 import io.gatling.tcp.check.TcpCheck
 import org.jboss.netty.channel.Channel
 
-class TcpActor extends BaseActor with DataWriterClient {
+class TcpActor(dataWriterClient : DataWriterClient) extends BaseActor {
 
   override def receive: Receive = initialState
 
@@ -51,11 +51,13 @@ class TcpActor extends BaseActor with DataWriterClient {
         }
       }
     {
-      case Send(requestName, message, next, session, check) => {
+      case Send(requestName, message, next, session, check) =>
         logger.debug(s"Sending message check on channel '$channel': $message")
-
         val now = nowMillis
-
+        message match {
+          case TextTcpMessage(text) => channel.write(text)
+          case _                    => logger.warn("Only text messages supported")
+        }
         check match {
           case Some(c) =>
             // do this immediately instead of self sending a Listen message so that other messages don't get a chance to be handled before
@@ -63,14 +65,8 @@ class TcpActor extends BaseActor with DataWriterClient {
           case None => next ! session
         }
 
-        message match {
-          case TextTcpMessage(text) => channel.write(text)
-          case _                    => logger.warn("Only text messages supported")
-        }
-
         logRequest(session, requestName, OK, now, now)
-      }
-      case OnTextMessage(message, time) => {
+      case OnTextMessage(message, time) =>
         logger.debug(s"Received text message on  :$message")
 
         implicit val cache = scala.collection.mutable.Map.empty[Any, Any]
@@ -88,7 +84,6 @@ class TcpActor extends BaseActor with DataWriterClient {
 
           }
         }
-      }
       case CheckTimeout(check) =>
         tx.check match {
           case Some(`check`) =>
@@ -113,7 +108,7 @@ class TcpActor extends BaseActor with DataWriterClient {
         next ! newSession
       }
       case OnDisconnect(time) =>
-        logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some("channel disconnected"))
+//        logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some("channel disconnected"))
         context.become(disconnectedState(tx))
 
     }
@@ -126,11 +121,11 @@ class TcpActor extends BaseActor with DataWriterClient {
       logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some("channel already closed"))
       val newTx = tx.copy(updates = Session.MarkAsFailedUpdate :: tx.updates, check = None)
       newTx.next ! newTx.applyUpdates(newTx.session).session
-      context.stop(self)
+//      context.stop(self)
   }
 
   private def logRequest(session: Session, requestName: String, status: Status, started: Long, ended: Long, errorMessage: Option[String] = None): Unit = {
-    writeRequestData(
+    dataWriterClient.writeRequestData(
       session,
       requestName,
       started,
@@ -165,4 +160,8 @@ class TcpActor extends BaseActor with DataWriterClient {
       case _ => tx
     }
   }
+}
+
+object TcpActor extends DataWriterClient{
+  def props(dataWriter : DataWriterClient) = Props(new TcpActor(dataWriter))
 }

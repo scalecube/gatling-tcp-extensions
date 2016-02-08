@@ -4,7 +4,7 @@ import io.gatling.tcp.Predef._
 
 import scala.concurrent.duration._
 
-class TcpCompileTest extends Simulation {
+class TcpCompile extends Simulation {
 
   val tcpConfig = tcp.address("127.0.0.1").port(4800).lengthBased(4)
   val scn = scenario("Tcp")
