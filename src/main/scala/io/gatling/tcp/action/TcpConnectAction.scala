@@ -2,8 +2,9 @@ package io.gatling.tcp.action
 
 import akka.actor.ActorDSL._
 import akka.actor.ActorRef
-import io.gatling.core.action.{ Failable, Interruptable }
-import io.gatling.core.session.{ Expression, Session }
+import io.gatling.core.action.{Failable, Interruptable}
+import io.gatling.core.result.writer.DataWriterClient
+import io.gatling.core.session.{Expression, Session}
 import io.gatling.core.util.TimeHelper._
 import io.gatling.core.validation.Validation
 import io.gatling.tcp._
@@ -20,7 +21,8 @@ class TcpConnectAction(requestName: Expression[String], val next: ActorRef, prot
       def connect(tx: TcpTx): Unit = {
         //  logger.info(s"Opening websocket '$wsName': Scenario '${session.scenarioName}', UserId #${session.userId}")
 
-        val tcpActor = actor(context, actorName("tcpActor"))(new TcpActor())
+        val dataWriterClient = new DataWriterClient {}
+        val tcpActor = actor(context, actorName("tcpActor"))(new TcpActor(dataWriterClient))
         TcpEngine.instance.startTcpTransaction(tx, tcpActor)
 
       }

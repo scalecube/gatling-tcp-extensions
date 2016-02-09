@@ -1,13 +1,16 @@
 import io.gatling.sbt.GatlingPlugin
 
 val scala_version = "2.11.4"
+val akka_version ="2.3.7"
+
 def gatling = "io.gatling" % "gatling-core" % "2.1.5"
 def netty = "io.netty" % "netty" % "3.10.1.Final"
-def akkaActor = "com.typesafe.akka" %% "akka-actor" % "2.3.7"
+def akkaActor = "com.typesafe.akka" %% "akka-actor" % akka_version
 def scalalogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0"
 def scalaLibrary = "org.scala-lang" % "scala-library" % scala_version
 def highcharts = "io.gatling.highcharts" % "gatling-charts-highcharts" % "2.1.5" % "test"
 def gatlingtestframework = "io.gatling" % "gatling-test-framework" % "2.1.5" % "test"
+def akkaTest = "com.typesafe.akka" %% "akka-testkit" % akka_version % "test"
 
 
 lazy val root = (project in file(".")).
@@ -21,7 +24,10 @@ lazy val root = (project in file(".")).
     libraryDependencies += akkaActor,
     libraryDependencies += scalalogging,
     libraryDependencies += highcharts,
-    libraryDependencies += gatlingtestframework
+    libraryDependencies += gatlingtestframework,
+    libraryDependencies += akkaTest,
+    libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.6" % "test",
+    libraryDependencies += "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test"
   )
 
 enablePlugins(GatlingPlugin)

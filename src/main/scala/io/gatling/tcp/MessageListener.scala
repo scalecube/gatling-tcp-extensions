@@ -14,6 +14,6 @@ class MessageListener(tx: TcpTx, actor: ActorRef) extends SimpleChannelUpstreamH
   }
 
   override def channelConnected(ctx: ChannelHandlerContext, e: ChannelStateEvent): Unit = {
-    actor ! OnConnect(tx, ctx.getChannel, nowMillis)
+//    actor ! OnConnect(tx, ctx.getChannel, nowMillis)
   }
 }
