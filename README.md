@@ -1,7 +1,7 @@
 Project status
 ==================
+[![Build Status](https://travis-ci.org/scalecube/gatling-tcp-extensions.svg?branch=master)](https://travis-ci.org/scalecube/gatling-tcp-extensions)
 
-[![Build Status](https://travis-ci.org/myroslavlisniak/gatling-tcp-extensions.svg?branch=fix_behaviour)](https://travis-ci.org/myroslavlisniak/gatling-tcp-extensions)
 This is alpha version, which allow to send strings via tcp protocol using gatling library.
 gatling-tcp-extensions
 ==================
