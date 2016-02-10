@@ -117,10 +117,11 @@ class TcpActor(dataWriterClient : DataWriterClient) extends BaseActor {
   def disconnectedState(tx: TcpTx) : Receive = {
     case OnDisconnect(time) =>
 
-    case Send =>
+    case _ =>
       logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some("channel already closed"))
       val newTx = tx.copy(updates = Session.MarkAsFailedUpdate :: tx.updates, check = None)
       newTx.next ! newTx.applyUpdates(newTx.session).session
+
 //      context.stop(self)
   }
 
