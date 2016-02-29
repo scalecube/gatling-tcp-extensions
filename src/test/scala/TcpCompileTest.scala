@@ -7,6 +7,7 @@ import scala.concurrent.duration._
 class TcpCompile extends Simulation {
 
   val tcpConfig = tcp.address("127.0.0.1").port(4800).lengthBased(4)
+  val defaultFramerTcpConfig = tcp.address("127.0.0.1").port(4800)
   val scn = scenario("Tcp")
     .exec(tcp("Connect").connect())
     .pause(1)
@@ -18,6 +19,6 @@ class TcpCompile extends Simulation {
   }
     .exec(tcp("disconnect").disconnect())
 
-  setUp(scn.inject(atOnceUsers(5))).protocols(tcpConfig)
+  setUp(scn.inject(atOnceUsers(5))).protocols(defaultFramerTcpConfig, tcpConfig)
 
 }
