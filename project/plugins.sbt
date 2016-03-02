@@ -1,6 +1,6 @@
 logLevel := Level.Warn
 
-addSbtPlugin("io.gatling" % "gatling-sbt" % "2.1.5")
+addSbtPlugin("io.gatling" % "gatling-sbt" % "2.1.7")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.3")
 
