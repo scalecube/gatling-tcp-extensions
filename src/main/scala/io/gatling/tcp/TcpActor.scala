@@ -99,30 +99,47 @@ class TcpActor(dataWriterClient : DataWriterClient) extends BaseActor {
       // ignore outdated timeout
       case Disconnect(requestName, next, session) => {
 
-        logger.debug(s"Disconnect channel for session: $session")
+        logger.debug(s"Disconnecting channel for session: $session")
         channel.close()
-        val newSession: Session = session.remove("channel")
-        //
-        logRequest(session, requestName, OK, nowMillis, nowMillis)
-        context.become(disconnectedState(tx))
-        next ! newSession
+        val newTx = failPendingCheck(tx, "Check didn't succeed by the time the TCP socket was asked to be closed")
+          .applyUpdates(session)
+          .copy(requestName = requestName, start = nowMillis, next = next)
+        // expect the event form netty in "disconnectingState" as it will come regardless to who initialized disconnect
+        context.become(disconnectingState(channel, newTx))
       }
       case OnDisconnect(time) =>
-//        logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some("channel disconnected"))
-        context.become(disconnectedState(tx))
+        // disconnection triggered by server
+        logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some(s"Tcp connection closed by server"))
+        val newTx = tx.copy(updates = Session.MarkAsFailedUpdate :: tx.updates, check = None)
+        newTx.next ! newTx.applyUpdates(newTx.session).session
+        context.stop(self)
+
+      case unexpected => logger.info(s"Discarding unknown message $unexpected while in open state")
 
     }
   }
 
-  def disconnectedState(tx: TcpTx) : Receive = {
+  def disconnectingState(channel: Channel, tx: TcpTx): Receive = {
+    case m: OnDisconnect =>
+      import tx._
+      logRequest(session, requestName, OK, start, nowMillis)
+      val newSession: Session = session.remove("channel")
+      next ! newSession
+      context.stop(self)
+
+    case unexpected =>
+      logger.info(s"Discarding unknown message $unexpected while in closing state")
+  }
+
+  def disconnectedState(tx: TcpTx): Receive = {
+    // should come here in case of failed Connect
     case OnDisconnect(time) =>
 
-    case _ =>
-      logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some("channel already closed"))
+    case unexpected =>
+      logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some("channel already closed for event $unexpected"))
       val newTx = tx.copy(updates = Session.MarkAsFailedUpdate :: tx.updates, check = None)
       newTx.next ! newTx.applyUpdates(newTx.session).session
-
-//      context.stop(self)
+      context.stop(self)
   }
 
   private def logRequest(session: Session, requestName: String, status: Status, started: Long, ended: Long, errorMessage: Option[String] = None): Unit = {
