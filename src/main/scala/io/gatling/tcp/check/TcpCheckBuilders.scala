@@ -16,7 +16,7 @@
 package io.gatling.tcp.check
 
 import io.gatling.core.check.{ Extender, Preparer }
-import io.gatling.core.validation.SuccessWrapper
+import io.gatling.commons.validation.SuccessWrapper
 import scala.concurrent.duration.FiniteDuration
 
 object TcpCheckBuilders {

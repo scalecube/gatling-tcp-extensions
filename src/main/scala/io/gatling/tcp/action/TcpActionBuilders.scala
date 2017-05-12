@@ -3,7 +3,7 @@ package io.gatling.tcp.action
 import akka.actor.ActorDSL._
 import akka.actor.ActorRef
 import io.gatling.core.action.builder.ActionBuilder
-import io.gatling.core.config.Protocols
+import io.gatling.commons.config.Protocols
 import io.gatling.core.session.Expression
 import io.gatling.tcp.{ TcpCheckBuilder, TcpProtocol, TcpMessage }
 

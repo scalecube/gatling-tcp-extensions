@@ -3,10 +3,10 @@ package io.gatling.tcp
 import akka.actor.{ActorRef, Props}
 import io.gatling.core.akka.BaseActor
 import io.gatling.core.check.CheckResult
-import io.gatling.core.result.message.{KO, OK, Status}
+import io.gatling.commons.stats.{KO, OK, Status}
 import io.gatling.core.result.writer.DataWriterClient
 import io.gatling.core.session.Session
-import io.gatling.core.util.TimeHelper._
+import io.gatling.commons.util.TimeHelper._
 import io.gatling.tcp.check.TcpCheck
 import org.jboss.netty.channel.Channel
 
@@ -74,7 +74,7 @@ class TcpActor(dataWriterClient : DataWriterClient) extends BaseActor {
         tx.check.foreach { check =>
 
           check.check(message, tx.session) match {
-            case io.gatling.core.validation.Success(result) =>
+            case io.gatling.commons.validation.Success(result) =>
 
               succeedPendingCheck(result)
             case s =>

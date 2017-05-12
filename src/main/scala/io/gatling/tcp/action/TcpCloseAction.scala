@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.io.Tcp.Close
 import io.gatling.core.action.{ Failable, Interruptable }
 import io.gatling.core.session.{ Expression, Session }
-import io.gatling.core.validation.Validation
+import io.gatling.commons.validation.Validation
 import io.gatling.tcp.{ Disconnect, Send }
 
 class TcpCloseAction(val requestName: Expression[String], val next: ActorRef) extends Interruptable with Failable {

@@ -3,7 +3,7 @@ package io.gatling.tcp.action
 import akka.actor.ActorRef
 import io.gatling.core.action.{ Interruptable, Chainable, Failable }
 import io.gatling.core.session.{ Expression, Session }
-import io.gatling.core.validation.Validation
+import io.gatling.commons.validation.Validation
 import io.gatling.tcp.{ TcpCheckBuilder, Send, TcpMessage }
 
 class TcpSendAction(val requestName: Expression[String], val next: ActorRef, message: Expression[TcpMessage], checkBuilder: Option[TcpCheckBuilder]) extends Interruptable with Failable {

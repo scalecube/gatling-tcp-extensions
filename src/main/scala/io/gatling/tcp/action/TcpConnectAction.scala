@@ -5,8 +5,8 @@ import akka.actor.ActorRef
 import io.gatling.core.action.{Failable, Interruptable}
 import io.gatling.core.result.writer.DataWriterClient
 import io.gatling.core.session.{Expression, Session}
-import io.gatling.core.util.TimeHelper._
-import io.gatling.core.validation.Validation
+import io.gatling.commons.util.TimeHelper._
+import io.gatling.commons.validation.Validation
 import io.gatling.tcp._
 
 class TcpConnectAction(requestName: Expression[String], val next: ActorRef, protocol: TcpProtocol) extends Interruptable with Failable {

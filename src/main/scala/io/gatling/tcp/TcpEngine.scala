@@ -29,7 +29,7 @@ object TcpEngine extends AkkaDefaults with StrictLogging {
     if (!_instance.isDefined) {
       val client = new TcpEngine
       _instance = Some(client)
-      system.registerOnTermination(stop())
+      ctx.system.registerOnTermination(stop())
     }
   }
 
