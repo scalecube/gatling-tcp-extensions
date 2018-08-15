@@ -1,12 +1,14 @@
 import io.gatling.core.Predef._
 import io.gatling.core.scenario.Simulation
 import io.gatling.tcp.Predef._
+import io.gatling.tcp.TcpEngine._
+
 
 import scala.concurrent.duration._
 
 class TcpCompile extends Simulation {
 
-  val tcpConfig = tcp.address("127.0.0.1").port(4800).lengthBased(4)
+  val tcpConfig = tcp.address("127.0.0.1").port(4800).lengthBased(4, NO_TLS)
   val defaultFramerTcpConfig = tcp.address("127.0.0.1").port(4800)
   val scn = scenario("Tcp")
     .exec(tcp("Connect").connect())

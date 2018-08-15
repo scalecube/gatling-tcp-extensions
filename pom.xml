@@ -8,9 +8,10 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>GatlingTCP</artifactId>
     <name>Gatling TCP Extensions</name>
-    <groupId>io.gatling.txp</groupId>
+    <groupId>io.gatling.tcp</groupId>
     <version>1.0.0</version>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
+
 
     <dependencies>
         <dependency>

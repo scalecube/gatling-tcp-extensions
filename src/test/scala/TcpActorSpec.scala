@@ -11,7 +11,7 @@ import io.gatling.tcp.check.TcpCheck
 import org.jboss.netty.channel.Channel
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-
+import io.gatling.tcp.TcpEngine._
 import scala.concurrent.duration._
 
 class TcpActorSpec(_system: ActorSystem) extends TestKit(_system) with WordSpecLike with Matchers with BeforeAndAfterAll
@@ -19,7 +19,7 @@ with MockFactory {
 
   def this() = this(GatlingActorSystem.start())
 
-  val protocol = tcp.address("127.0.0.1").port(4800).lengthBased(4)
+  val protocol = tcp.address("127.0.0.1").port(4800).lengthBased(4, NO_TLS)
   val dataWriterClient = new TestDataWriterClient()
 
   GatlingConfiguration.setUpForTest()
