@@ -1,9 +1,12 @@
 package io.gatling.tcp
 
+import java.io.FileInputStream
 import java.net.InetSocketAddress
+import java.security.{KeyStore, SecureRandom}
 import java.util.concurrent.{Executors, TimeUnit}
-import javax.net.ssl.SSLContext
 
+import javax.net.ssl.{KeyManagerFactory, TrustManagerFactory}
+import javax.net.ssl.SSLContext
 import akka.actor.ActorRef
 import com.typesafe.scalalogging.StrictLogging
 import io.gatling.core.akka.AkkaDefaults
@@ -20,12 +23,15 @@ import org.jboss.netty.handler.codec.string.{StringDecoder, StringEncoder}
 import org.jboss.netty.handler.ssl.SslHandler
 import org.jboss.netty.util.{CharsetUtil, HashedWheelTimer}
 
+import org.apache.commons.io.IOUtils
+
 import scala.concurrent.{Future, Promise}
 
 object TcpEngine extends AkkaDefaults with StrictLogging {
   private var _instance: Option[TcpEngine] = None
 
   val NO_TLS = 0
+
 
   def start(): Unit = {
     if (!_instance.isDefined) {
@@ -87,16 +93,51 @@ class TcpEngine {
 
   //TODO Add TLS here
   def tcpClient(session: Session, protocol: TcpProtocol, listener: MessageListener): Future[Session] = {
+
+    val TLS = "TLS"
+    val TLS_1_2 = "TLSv1.2"
+
+    val trustStoreResource = "certificates/gatling_truststore_lt02.jks"
+    val keyStoreResource = "certificates/gatling-keystore.jks"
+    val password = "password0"
+
+
     val bootstrap = new ClientBootstrap(socketChannelFactory)
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
 
       def getSSLHandler(): SslHandler = {
-        var context = SSLContext.getInstance("TLS")
-        context.init(null, null, null)
+        var context = SSLContext.getInstance(TLS)
+
+//        val keyStore = KeyStore.getInstance("jks")
+//        keyStore.load(getClass.getResourceAsStream(keyStoreResource), password.toCharArray)
+//        val keyManagerFactory = KeyManagerFactory.getInstance("SunX509")
+//        keyManagerFactory.init(keyStore, password.toCharArray)
+//        val trustManagerFactory = TrustManagerFactory.getInstance("SunX509")
+//        trustManagerFactory.init(keyStore)
+
+        val keyStorePassword = password // the password you used whit the command keytool
+        val ks = KeyStore.getInstance(KeyStore.getDefaultType)
+        val keyStorePath = getClass.getClassLoader.getResource(trustStoreResource)
+        val inputStream = new FileInputStream(keyStorePath.getPath)
+        ks.load(inputStream, keyStorePassword.toArray)
+        IOUtils.closeQuietly(inputStream)
+        // create trust manager from keystore
+        val tmf = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm)
+        tmf.init(ks)
+        val trustManager = tmf.getTrustManagers
+
+
+        context.init(Array(), trustManager, null)
+        //context.init(keyManagerFactory.getKeyManagers, trustManagerFactory.getTrustManagers, new SecureRandom)
         var engine = context.createSSLEngine()
         engine.setUseClientMode(true)
         new SslHandler(engine, false)
       }
+
+//      https://github.com/akka/akka-http/blob/master/docs/src/test/scala/docs/http/scaladsl/server/HttpsServerExampleSpec.scala
+//      https://stackoverflow.com/questions/40112647/scala-https-client-with-ssl-certificate
+
+
 
       override def getPipeline: ChannelPipeline = {
         val pipeline = Channels.pipeline()
