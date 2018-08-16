@@ -109,26 +109,29 @@ class TcpEngine {
         var context = SSLContext.getInstance(TLS)
 
 //        val keyStore = KeyStore.getInstance("jks")
-//        keyStore.load(getClass.getResourceAsStream(keyStoreResource), password.toCharArray)
+//        keyStore.load(getClass.getResourceAsStream(trustStoreResource), password.toCharArray)
 //        val keyManagerFactory = KeyManagerFactory.getInstance("SunX509")
 //        keyManagerFactory.init(keyStore, password.toCharArray)
 //        val trustManagerFactory = TrustManagerFactory.getInstance("SunX509")
+//
 //        trustManagerFactory.init(keyStore)
+//        context.init(Array(), trustManagerFactory.getTrustManagers, new SecureRandom)
 
         val keyStorePassword = password // the password you used whit the command keytool
         val ks = KeyStore.getInstance(KeyStore.getDefaultType)
-        val keyStorePath = getClass.getClassLoader.getResource(trustStoreResource)
-        val inputStream = new FileInputStream(keyStorePath.getPath)
-        ks.load(inputStream, keyStorePassword.toArray)
-        IOUtils.closeQuietly(inputStream)
+//        val keyStorePath = getClass.getClassLoader.getResource(trustStoreResource)
+//        val inputStream = new FileInputStream(keyStorePath.getPath)
+//        ks.load(inputStream, keyStorePassword.toArray)
+//        IOUtils.closeQuietly(inputStream)
+
+        ks.load(getClass.getClassLoader.getResourceAsStream(trustStoreResource), password.toCharArray)
+
         // create trust manager from keystore
         val tmf = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm)
         tmf.init(ks)
         val trustManager = tmf.getTrustManagers
-
-
         context.init(Array(), trustManager, null)
-        //context.init(keyManagerFactory.getKeyManagers, trustManagerFactory.getTrustManagers, new SecureRandom)
+
         var engine = context.createSSLEngine()
         engine.setUseClientMode(true)
         new SslHandler(engine, false)
