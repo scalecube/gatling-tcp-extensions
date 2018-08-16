@@ -3,6 +3,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <scala.version>2.11.4</scala.version>
     </properties>
     <modelVersion>4.0.0</modelVersion>
@@ -69,8 +70,12 @@
         </dependency>
     </dependencies>
 
+
+
     <build>
+        <finalName>${project.artifactId}-${project.version}</finalName>
         <sourceDirectory>src/main/scala</sourceDirectory>
+        <testSourceDirectory>src/test/scala</testSourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
