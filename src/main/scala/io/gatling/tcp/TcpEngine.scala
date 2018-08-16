@@ -106,7 +106,7 @@ class TcpEngine {
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
 
       def getSSLHandler(): SslHandler = {
-        var context = SSLContext.getInstance(TLS)
+        var context = SSLContext.getInstance(TLS_1_2)
 
 //        val keyStore = KeyStore.getInstance("jks")
 //        keyStore.load(getClass.getResourceAsStream(trustStoreResource), password.toCharArray)
@@ -122,7 +122,7 @@ class TcpEngine {
 //        val keyStorePath = getClass.getClassLoader.getResource(trustStoreResource)
 //        val inputStream = new FileInputStream(keyStorePath.getPath)
 //        ks.load(inputStream, keyStorePassword.toArray)
-//        IOUtils.closeQuietly(inputStream)
+//        IOUtils.closeQuietly(inputStream)                     // << deprecated
 
         ks.load(getClass.getClassLoader.getResourceAsStream(trustStoreResource), password.toCharArray)
 
@@ -131,6 +131,9 @@ class TcpEngine {
         tmf.init(ks)
         val trustManager = tmf.getTrustManagers
         context.init(Array(), trustManager, null)
+
+
+
 
         var engine = context.createSSLEngine()
         engine.setUseClientMode(true)
