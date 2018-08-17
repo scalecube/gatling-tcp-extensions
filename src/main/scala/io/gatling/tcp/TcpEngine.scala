@@ -107,43 +107,17 @@ class TcpEngine {
 
       def getSSLHandler(): SslHandler = {
         var context = SSLContext.getInstance(TLS_1_2)
-
-//        val keyStore = KeyStore.getInstance("jks")
-//        keyStore.load(getClass.getResourceAsStream(trustStoreResource), password.toCharArray)
-//        val keyManagerFactory = KeyManagerFactory.getInstance("SunX509")
-//        keyManagerFactory.init(keyStore, password.toCharArray)
-//        val trustManagerFactory = TrustManagerFactory.getInstance("SunX509")
-//
-//        trustManagerFactory.init(keyStore)
-//        context.init(Array(), trustManagerFactory.getTrustManagers, new SecureRandom)
-
-        val keyStorePassword = password // the password you used whit the command keytool
         val ks = KeyStore.getInstance(KeyStore.getDefaultType)
-//        val keyStorePath = getClass.getClassLoader.getResource(trustStoreResource)
-//        val inputStream = new FileInputStream(keyStorePath.getPath)
-//        ks.load(inputStream, keyStorePassword.toArray)
-//        IOUtils.closeQuietly(inputStream)                     // << deprecated
-
         ks.load(getClass.getClassLoader.getResourceAsStream(trustStoreResource), password.toCharArray)
-
-        // create trust manager from keystore
         val tmf = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm)
         tmf.init(ks)
         val trustManager = tmf.getTrustManagers
         context.init(Array(), trustManager, null)
 
-
-
-
         var engine = context.createSSLEngine()
         engine.setUseClientMode(true)
         new SslHandler(engine, false)
       }
-
-//      https://github.com/akka/akka-http/blob/master/docs/src/test/scala/docs/http/scaladsl/server/HttpsServerExampleSpec.scala
-//      https://stackoverflow.com/questions/40112647/scala-https-client-with-ssl-certificate
-
-
 
       override def getPipeline: ChannelPipeline = {
         val pipeline = Channels.pipeline()
