@@ -1,8 +1,8 @@
 package io.gatling.tcp
 
-import java.io.FileInputStream
+
 import java.net.InetSocketAddress
-import java.security.{KeyStore, SecureRandom}
+import java.security.KeyStore
 import java.util.concurrent.{Executors, TimeUnit}
 
 import javax.net.ssl.{KeyManagerFactory, TrustManagerFactory}
@@ -23,7 +23,7 @@ import org.jboss.netty.handler.codec.string.{StringDecoder, StringEncoder}
 import org.jboss.netty.handler.ssl.SslHandler
 import org.jboss.netty.util.{CharsetUtil, HashedWheelTimer}
 
-import org.apache.commons.io.IOUtils
+
 
 import scala.concurrent.{Future, Promise}
 
@@ -88,9 +88,7 @@ class TcpEngine {
 
   val encoder: StringEncoder = new StringEncoder(CharsetUtil.UTF_8)
 
-  //TODO Add TLS here
   def tcpClient(session: Session, protocol: TcpProtocol, listener: MessageListener): Future[Session] = {
-
     val bootstrap = new ClientBootstrap(socketChannelFactory)
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
 
