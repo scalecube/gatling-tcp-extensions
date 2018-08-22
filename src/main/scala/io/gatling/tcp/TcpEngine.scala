@@ -1,6 +1,5 @@
 package io.gatling.tcp
 
-
 import java.net.InetSocketAddress
 import java.security.KeyStore
 import java.util.concurrent.{Executors, TimeUnit}
@@ -22,8 +21,6 @@ import org.jboss.netty.handler.codec.protobuf.{ProtobufVarint32FrameDecoder, Pro
 import org.jboss.netty.handler.codec.string.{StringDecoder, StringEncoder}
 import org.jboss.netty.handler.ssl.SslHandler
 import org.jboss.netty.util.{CharsetUtil, HashedWheelTimer}
-
-
 
 import scala.concurrent.{Future, Promise}
 
