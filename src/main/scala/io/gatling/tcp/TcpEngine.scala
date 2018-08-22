@@ -30,9 +30,6 @@ import scala.concurrent.{Future, Promise}
 object TcpEngine extends AkkaDefaults with StrictLogging {
   private var _instance: Option[TcpEngine] = None
 
-  val NO_TLS = 0
-
-
   def start(): Unit = {
     if (!_instance.isDefined) {
       val client = new TcpEngine
@@ -94,21 +91,13 @@ class TcpEngine {
   //TODO Add TLS here
   def tcpClient(session: Session, protocol: TcpProtocol, listener: MessageListener): Future[Session] = {
 
-    val TLS = "TLS"
-    val TLS_1_2 = "TLSv1.2"
-
-    val trustStoreResource = "certificates/gatling_truststore_lt02.jks"
-    val keyStoreResource = "certificates/gatling-keystore.jks"
-    val password = "password0"
-
-
     val bootstrap = new ClientBootstrap(socketChannelFactory)
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
 
-      def getSSLHandler(): SslHandler = {
-        var context = SSLContext.getInstance(TLS_1_2)
+      private def getSSLHandler: SslHandler = {
+        val context = SSLContext.getInstance(protocol.tls.get.ver)
         val ks = KeyStore.getInstance(KeyStore.getDefaultType)
-        ks.load(getClass.getClassLoader.getResourceAsStream(trustStoreResource), password.toCharArray)
+        ks.load(getClass.getClassLoader.getResourceAsStream(protocol.tls.get.trustStoreResource), protocol.tls.get.password.toCharArray)
         val tmf = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm)
         tmf.init(ks)
         val trustManager = tmf.getTrustManagers
@@ -123,8 +112,8 @@ class TcpEngine {
         val pipeline = Channels.pipeline()
         val framer = resolveFramer(protocol)
         val prepender = resolvePrepender(protocol)
-        if (protocol.tls > 0) {
-          val handler = getSSLHandler()
+        if (protocol.tls.isDefined) {
+          val handler = getSSLHandler
           pipeline.addLast("ssl", handler)
         }
         pipeline.addLast("framer", framer)
