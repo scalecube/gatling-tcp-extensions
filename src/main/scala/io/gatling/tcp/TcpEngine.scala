@@ -85,8 +85,8 @@ class TcpEngine {
 
   val encoder: StringEncoder = new StringEncoder(CharsetUtil.UTF_8)
 
-  def tcpClient(session: Session, protocol: TcpProtocol, listener: MessageListener): Future[Session] = {
-    val bootstrap = new ClientBootstrap(socketChannelFactory)
+  def tcpClient(session: Session, protocol: TcpProtocol, listener: MessageListener, mockChannelFuture: ChannelFuture = null, mockBootstrap: ClientBootstrap = null): Future[Session] = {
+    val bootstrap = if (mockBootstrap == null) new ClientBootstrap(socketChannelFactory) else mockBootstrap
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
 
       private def getSSLHandler: SslHandler = {
@@ -119,7 +119,7 @@ class TcpEngine {
         pipeline
       }
     })
-    val channelFuture = bootstrap.connect(new InetSocketAddress(protocol.address, protocol.port))
+    val channelFuture = if (protocol.port > 0) bootstrap.connect(new InetSocketAddress(protocol.address, protocol.port)) else mockChannelFuture
     val promise = Promise[Session]()
     channelFuture.addListener(new ChannelFutureListener {
       override def operationComplete(p1: ChannelFuture): Unit = {

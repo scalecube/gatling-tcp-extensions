@@ -22,7 +22,6 @@ class TcpEngineTest extends FlatSpec with MockFactory {
   val mockChannel = mock[Channel]
 
   (mockChannelFuture.isSuccess _) when() returns(true)
-//  (mockChannelFuture.addListener _) when(new FunctionAdapter1((x:ChannelFutureListener) => true)) returns()
   (mockChannelFuture.getChannel _) when() returns(mockChannel)
 
   val tcpEngine = new TcpEngine()
