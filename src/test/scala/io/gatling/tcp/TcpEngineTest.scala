@@ -26,13 +26,12 @@ class TcpEngineTest extends FlatSpec with MockFactory {
 
   val tcpEngine = new TcpEngine()
   val session = Session("SessionName", "SessionID")
-  val tcpTx = TcpTx(session, ActorRef.noSender, TimeHelper.nowMillis, tcpProtocol, tcpMessage, "ReqName")
   val bootstrap = new ClientBootstrap(tcpEngine.socketChannelFactory)
 
-
-  val listener = new MessageListener(tcpTx, ActorRef.noSender)
-  val tcpProtocol = TcpProtocol("localhost", 0, DelimiterBasedTcpFramer(Array(' '), false), Some(TcpTls("TLSv1.2", "abc", "abc")))
   val tcpMessage = TextTcpMessage("Message")
+  val tcpProtocol = TcpProtocol("localhost", 0, DelimiterBasedTcpFramer(Array(' '), false), Some(TcpTls("TLSv1.2", "abc", "abc")))
+  val tcpTx = TcpTx(session, ActorRef.noSender, TimeHelper.nowMillis, tcpProtocol, tcpMessage, "ReqName")
+  val listener = new MessageListener(tcpTx, ActorRef.noSender)
 
   "A TCP TLS Connection" should "Have an SSL attribute" in {
 
