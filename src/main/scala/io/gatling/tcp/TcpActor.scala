@@ -109,8 +109,7 @@ class TcpActor(dataWriterClient : DataWriterClient) extends BaseActor {
       }
       case OnDisconnect(time) =>
         // disconnection triggered by server
-        logRequest(tx.session, tx.requestName, KO, tx.start, nowMillis, Some(s"Tcp connection closed by server"))
-        val newTx = tx.copy(updates = Session.MarkAsFailedUpdate :: tx.updates, check = None)
+        val newTx = tx.copy(updates = Session.Identity :: tx.updates, check = None)
         newTx.next ! newTx.applyUpdates(newTx.session).session
         context.stop(self)
 
