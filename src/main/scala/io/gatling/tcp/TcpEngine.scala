@@ -119,12 +119,12 @@ class TcpEngine {
         pipeline
       }
     })
-    val channelFuture = if (protocol.port > 0) bootstrap.connect(new InetSocketAddress(protocol.address, protocol.port)) else channelFuture
+    val newChannelFuture = if (protocol.port > 0) bootstrap.connect(new InetSocketAddress(protocol.address, protocol.port)) else channelFuture
     val promise = Promise[Session]()
-    channelFuture.addListener(new ChannelFutureListener {
+    newChannelFuture.addListener(new ChannelFutureListener {
       override def operationComplete(p1: ChannelFuture): Unit = {
-        if (channelFuture.isSuccess) {
-          val channel = channelFuture.getChannel
+        if (newChannelFuture.isSuccess) {
+          val channel = newChannelFuture.getChannel
           session("channel").asOption[Channel] match {
             case Some(ch) => promise.trySuccess(session)
             case None => promise.trySuccess(session.set("channel", channel))
