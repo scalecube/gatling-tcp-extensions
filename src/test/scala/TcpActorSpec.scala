@@ -19,7 +19,7 @@ with MockFactory {
 
   def this() = this(GatlingActorSystem.start())
 
-  val protocol = tcp.address("127.0.0.1").port(4800).lengthBased(4, NO_TLS)
+  val protocol = tcp.address("127.0.0.1").port(4800).lengthBased(4)
   val dataWriterClient = new TestDataWriterClient()
 
   GatlingConfiguration.setUpForTest()

@@ -1,9 +1,11 @@
 package io.gatling.tcp
 
 import java.net.InetSocketAddress
+import java.security.KeyStore
 import java.util.concurrent.{Executors, TimeUnit}
-import javax.net.ssl.SSLContext
 
+import javax.net.ssl.{KeyManagerFactory, TrustManagerFactory}
+import javax.net.ssl.SSLContext
 import akka.actor.ActorRef
 import com.typesafe.scalalogging.StrictLogging
 import io.gatling.core.akka.AkkaDefaults
@@ -24,8 +26,6 @@ import scala.concurrent.{Future, Promise}
 
 object TcpEngine extends AkkaDefaults with StrictLogging {
   private var _instance: Option[TcpEngine] = None
-
-  val NO_TLS = 0
 
   def start(): Unit = {
     if (!_instance.isDefined) {
@@ -85,14 +85,19 @@ class TcpEngine {
 
   val encoder: StringEncoder = new StringEncoder(CharsetUtil.UTF_8)
 
-  //TODO Add TLS here
-  def tcpClient(session: Session, protocol: TcpProtocol, listener: MessageListener): Future[Session] = {
-    val bootstrap = new ClientBootstrap(socketChannelFactory)
+  def tcpClient(session: Session, protocol: TcpProtocol, listener: MessageListener, channelFuture: ChannelFuture = null, bootstrapIn: ClientBootstrap = null): Future[Session] = {
+    val bootstrap = if (bootstrapIn == null) new ClientBootstrap(socketChannelFactory) else bootstrapIn
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
 
-      def getSSLHandler(): SslHandler = {
-        var context = SSLContext.getInstance("TLS")
-        context.init(null, null, null)
+      private def getSSLHandler: SslHandler = {
+        val context = SSLContext.getInstance(protocol.tls.get.ver)
+        val ks = KeyStore.getInstance(KeyStore.getDefaultType)
+        ks.load(getClass.getClassLoader.getResourceAsStream(protocol.tls.get.trustStoreResource), protocol.tls.get.password.toCharArray)
+        val tmf = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm)
+        tmf.init(ks)
+        val trustManager = tmf.getTrustManagers
+        context.init(Array(), trustManager, null)
+
         var engine = context.createSSLEngine()
         engine.setUseClientMode(true)
         new SslHandler(engine, false)
@@ -102,8 +107,8 @@ class TcpEngine {
         val pipeline = Channels.pipeline()
         val framer = resolveFramer(protocol)
         val prepender = resolvePrepender(protocol)
-        if (protocol.tls > 0) {
-          val handler = getSSLHandler()
+        if (protocol.tls.isDefined) {
+          val handler = getSSLHandler
           pipeline.addLast("ssl", handler)
         }
         pipeline.addLast("framer", framer)
@@ -114,12 +119,12 @@ class TcpEngine {
         pipeline
       }
     })
-    val channelFuture = bootstrap.connect(new InetSocketAddress(protocol.address, protocol.port))
+    val newChannelFuture: ChannelFuture = if (protocol.port > 0) bootstrap.connect(new InetSocketAddress(protocol.address, protocol.port)) else channelFuture
     val promise = Promise[Session]()
-    channelFuture.addListener(new ChannelFutureListener {
+    newChannelFuture.addListener(new ChannelFutureListener {
       override def operationComplete(p1: ChannelFuture): Unit = {
-        if (channelFuture.isSuccess) {
-          val channel = channelFuture.getChannel
+        if (newChannelFuture.isSuccess) {
+          val channel = newChannelFuture.getChannel
           session("channel").asOption[Channel] match {
             case Some(ch) => promise.trySuccess(session)
             case None => promise.trySuccess(session.set("channel", channel))
