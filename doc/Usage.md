@@ -136,6 +136,6 @@ Now three types of delimiters is supported:
         .tls("TLSv1.2", "./certfile", "password")
 ```
 
-
+where ./certfile is the client certificate on the classpath
 
 
