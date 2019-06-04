@@ -1,6 +1,8 @@
 import io.gatling.core.Predef._
 import io.gatling.core.scenario.Simulation
 import io.gatling.tcp.Predef._
+import io.gatling.tcp.TcpEngine._
+
 
 import scala.concurrent.duration._
 

@@ -125,3 +125,17 @@ Now three types of delimiters is supported:
 
   setUp(scn.inject(atOnceUsers(5))).protocols(tcpConfig)
 ```
+
+##Example with TLS
+
+```scala
+  val tcpConfig = tcp
+        .address("127.0.0.1")
+        .port(6000)
+        .delimiterBased(",", false, "UTF-8")
+        .tls("TLSv1.2", "./certfile", "password")
+```
+
+where ./certfile is the client certificate on the classpath
+
+

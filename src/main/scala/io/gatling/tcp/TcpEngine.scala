@@ -1,26 +1,28 @@
 package io.gatling.tcp
 
 import java.net.InetSocketAddress
-import java.util.concurrent.{ Executors, TimeUnit }
+import java.security.KeyStore
+import java.util.concurrent.{Executors, TimeUnit}
 
+import javax.net.ssl.{KeyManagerFactory, TrustManagerFactory}
+import javax.net.ssl.SSLContext
 import akka.actor.ActorRef
 import com.typesafe.scalalogging.StrictLogging
 import io.gatling.core.akka.AkkaDefaults
-import io.gatling.core.check.Check
 import io.gatling.core.session.Session
 import io.gatling.tcp.check.TcpCheck
 import org.jboss.netty.bootstrap.ClientBootstrap
 import org.jboss.netty.buffer.{ChannelBuffer, ChannelBuffers}
 import org.jboss.netty.channel._
-import org.jboss.netty.channel.socket.nio.{ NioWorkerPool, NioClientBossPool, NioClientSocketChannelFactory }
-import org.jboss.netty.handler.codec.frame.{FrameDecoder, DelimiterBasedFrameDecoder, LengthFieldPrepender, LengthFieldBasedFrameDecoder}
+import org.jboss.netty.channel.socket.nio.{NioClientBossPool, NioClientSocketChannelFactory, NioWorkerPool}
+import org.jboss.netty.handler.codec.frame.{DelimiterBasedFrameDecoder, FrameDecoder, LengthFieldBasedFrameDecoder, LengthFieldPrepender}
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder
-import org.jboss.netty.handler.codec.protobuf.{ProtobufVarint32LengthFieldPrepender, ProtobufVarint32FrameDecoder}
-import org.jboss.netty.handler.codec.string.{ StringEncoder, StringDecoder }
-import org.jboss.netty.util.{ CharsetUtil, HashedWheelTimer }
+import org.jboss.netty.handler.codec.protobuf.{ProtobufVarint32FrameDecoder, ProtobufVarint32LengthFieldPrepender}
+import org.jboss.netty.handler.codec.string.{StringDecoder, StringEncoder}
+import org.jboss.netty.handler.ssl.SslHandler
+import org.jboss.netty.util.{CharsetUtil, HashedWheelTimer}
 
 import scala.concurrent.{Future, Promise}
-import scala.util.Try
 
 object TcpEngine extends AkkaDefaults with StrictLogging {
   private var _instance: Option[TcpEngine] = None
@@ -42,9 +44,10 @@ object TcpEngine extends AkkaDefaults with StrictLogging {
 
   def instance: TcpEngine = _instance match {
     case Some(engine) => engine
-    case _            => throw new UnsupportedOperationException("Tcp engine hasn't been started")
+    case _ => throw new UnsupportedOperationException("Tcp engine hasn't been started")
   }
 }
+
 case class TcpTx(session: Session,
                  next: ActorRef,
                  start: Long,
@@ -58,14 +61,18 @@ case class TcpTx(session: Session,
     copy(session = newSession, updates = Nil)
   }
 }
+
 trait TcpFramer
+
 case class LengthBasedTcpFramer(lengthFieldOffset: Int, lengthFieldLength: Int,
-                                 lengthAdjustment: Int, bytesToStrip: Int) extends TcpFramer{
-  def this(lengthFieldLength: Int) = this(0,lengthFieldLength, 0,lengthFieldLength)
+                                lengthAdjustment: Int, bytesToStrip: Int) extends TcpFramer {
+  def this(lengthFieldLength: Int) = this(0, lengthFieldLength, 0, lengthFieldLength)
 }
-case class DelimiterBasedTcpFramer(delimiters : Array[Byte], stripDelimiter : Boolean) extends TcpFramer {
+
+case class DelimiterBasedTcpFramer(delimiters: Array[Byte], stripDelimiter: Boolean) extends TcpFramer {
   def this(delimiters: Array[Byte]) = this(delimiters, true)
 }
+
 case object ProtobufVarint32TcpFramer extends TcpFramer
 
 class TcpEngine {
@@ -78,13 +85,32 @@ class TcpEngine {
 
   val encoder: StringEncoder = new StringEncoder(CharsetUtil.UTF_8)
 
-  def tcpClient(session: Session, protocol: TcpProtocol, listener: MessageListener) : Future[Session] = {
-    val bootstrap = new ClientBootstrap(socketChannelFactory)
+  def tcpClient(session: Session, protocol: TcpProtocol, listener: MessageListener, channelFuture: ChannelFuture = null, bootstrapIn: ClientBootstrap = null): Future[Session] = {
+    val bootstrap = if (bootstrapIn == null) new ClientBootstrap(socketChannelFactory) else bootstrapIn
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
+
+      private def getSSLHandler: SslHandler = {
+        val context = SSLContext.getInstance(protocol.tls.get.ver)
+        val ks = KeyStore.getInstance(KeyStore.getDefaultType)
+        ks.load(getClass.getClassLoader.getResourceAsStream(protocol.tls.get.trustStoreResource), protocol.tls.get.password.toCharArray)
+        val tmf = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm)
+        tmf.init(ks)
+        val trustManager = tmf.getTrustManagers
+        context.init(Array(), trustManager, null)
+
+        var engine = context.createSSLEngine()
+        engine.setUseClientMode(true)
+        new SslHandler(engine, false)
+      }
+
       override def getPipeline: ChannelPipeline = {
         val pipeline = Channels.pipeline()
         val framer = resolveFramer(protocol)
         val prepender = resolvePrepender(protocol)
+        if (protocol.tls.isDefined) {
+          val handler = getSSLHandler
+          pipeline.addLast("ssl", handler)
+        }
         pipeline.addLast("framer", framer)
         pipeline.addLast("prepender", prepender)
         pipeline.addLast("decoder", stringDecoder)
@@ -93,15 +119,15 @@ class TcpEngine {
         pipeline
       }
     })
-    val channelFuture = bootstrap.connect(new InetSocketAddress(protocol.address, protocol.port))
+    val newChannelFuture: ChannelFuture = if (protocol.port > 0) bootstrap.connect(new InetSocketAddress(protocol.address, protocol.port)) else channelFuture
     val promise = Promise[Session]()
-    channelFuture.addListener(new ChannelFutureListener {
+    newChannelFuture.addListener(new ChannelFutureListener {
       override def operationComplete(p1: ChannelFuture): Unit = {
-        if (channelFuture.isSuccess) {
-          val channel = channelFuture.getChannel
+        if (newChannelFuture.isSuccess) {
+          val channel = newChannelFuture.getChannel
           session("channel").asOption[Channel] match {
             case Some(ch) => promise.trySuccess(session)
-            case None     => promise.trySuccess(session.set("channel", channel))
+            case None => promise.trySuccess(session.set("channel", channel))
           }
         } else {
           promise.failure(p1.getCause)
@@ -136,7 +162,7 @@ class TcpEngine {
     }
   }
 
-  def startTcpTransaction(tx: TcpTx, actor: ActorRef) : Unit = {
+  def startTcpTransaction(tx: TcpTx, actor: ActorRef): Unit = {
     val listener = new MessageListener(tx, actor)
     import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -144,7 +170,7 @@ class TcpEngine {
 
     client.onComplete {
       case scala.util.Success(session) => actor ! OnConnect(tx, session("channel").asOption[Channel].get, System.currentTimeMillis())
-      case scala.util.Failure(th) => actor ! OnConnectFailed(tx,System.currentTimeMillis())
+      case scala.util.Failure(th) => actor ! OnConnectFailed(tx, System.currentTimeMillis())
     }
   }
 }
