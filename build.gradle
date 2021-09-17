@@ -1,0 +1,36 @@
+plugins {
+    id 'scala'
+    id 'maven-publish'
+}
+
+group 'io.gatling.tcp'
+version '1.0.0'
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId project.group
+            artifactId 'GatlingTCP'
+            version project.version
+            from components.java
+        }
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.typesafe.akka:akka-actor_2.11:2.3.7'
+    implementation 'io.gatling:gatling-core:2.1.5'
+    implementation 'com.typesafe.scala-logging:scala-logging_2.11:3.1.0'
+    implementation 'org.scala-lang:scala-library:${scala.version}'
+    implementation 'io.gatling.highcharts:gatling-charts-highcharts:2.1.5'
+    implementation 'io.gatling:gatling-test-framework:2.1.5'
+    testImplementation 'com.typesafe.akka:akka-testkit_2.11:2.3.7'
+    testImplementation 'org.scalamock:scalamock-scalatest-support_2.11:3.2'
+    testImplementation 'org.scalatest:scalatest_2.11:2.2.6'
+    implementation 'io.netty:netty:3.10.1.Final'
+}

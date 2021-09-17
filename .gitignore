@@ -44,3 +44,6 @@ recorder.conf
 gatling-compiler/src/main/resources/gatling-defaults.conf
 gatling-version.properties
 
+# Gradle
+.gradle
+
